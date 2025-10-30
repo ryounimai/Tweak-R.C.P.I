@@ -1,0 +1,11 @@
+id=tweakfrcpis
+name=Tweak R.C.P.I
+version=1.3.23 (1002942025)
+versionPatch=294
+versionCode=10323
+releaseDate=251029
+author=@Ryounime-Ai, @Mkzk_Ci
+description=Optimizes by set fullscreen, tuning ANGLE driver, and boost game performance. 
+banner=webroot/ima.webp
+axeronPlugin=13000
+updateJson=Coming Soon
