@@ -1,0 +1,939 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>TWEAK — R.C.P.I</title><style>*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#000}html,body{height:100%}body{background:url("ima.webp") center/cover no-repeat fixed;padding:20px;display:flex;flex-direction:column;align-items:center;min-height:100vh;background-color:rgba(255,255,255,0.05);}.bb{position: fixed;inset: 0;backdrop-filter: blur(2px);-webkit-backdrop-filter: blur(2px);pointer-events: none;z-index: -500;}.container{width:100%;max-width:520px}h1{margin-top:10px;text-align:center;font-weight:700;font-size:1.6rem;background:rgba(255,255,255,0.15);border-radius:22px;padding:12px 20px;backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.2);box-shadow:0 8px 32px rgba(0,0,0,0.1);text-shadow:0 1px 3px rgba(0,0,0,0.2);}.desc{text-align:center;opacity:.9;margin-top:8px;font-size:0.80rem;background:rgba(255,255,255,0.2);backdrop-filter:blur(5px);border:none;border-radius:12px;padding:12px;font-weight:700;color:#444}.image{width:100%;height:300px;border-radius:14px;overflow:hidden;margin-top:12px}.image img{width:100%;height:100%;object-fit:cover;display:block}.actions{margin-top:16px;display:flex;flex-direction:column;gap:10px;width:100%}button.action{background:rgba(255,255,255,0.2);backdrop-filter:blur(5px);border:none;border-radius:12px;padding:12px;font-size:1rem;font-weight:700;cursor:pointer;color:#000;transition:.14s ease}button.action:hover{transform:translateY(-3px);background:rgba(255,255,255,0.3)}#loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background: linear-gradient(to bottom left,rgba(205,195,255,0.9),rgba(250,250,250,0.9),rgba(205,195,255,0.9),rgba(250,250,250,0.9),rgba(205,195,255,0.9),rgba(250,250,250,0.9),rgba(205,195,255,0.9));backdrop-filter:blur(.9px)grayscale(10);z-index:9999;font-weight:700;color:#000}.popup-bg{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background: rgba(0,0,0,0.45);backdrop-filter: blur(5px);opacity:0;pointer-events:none;transition:.22s ease;z-index:1000}.popup-bg.active{opacity:1;pointer-events:auto}.popup{width:92%;max-width:520px;border-radius:18px;padding:18px;background: rgba(255,255,255,0.7);backdrop-filter: blur(50px);box-shadow:0 12px 36px rgba(0,0,0,0.22);color:#000;transform:scale(.96);opacity:0;transition:.22s ease;max-height:80vh;overflow:auto;position:relative}.popup-bg.active .popup{transform:scale(1);opacity:1}.popup h2{text-align:center;margin-bottom:12px;font-weight:700}.results{display:flex;flex-direction:column;gap:10px}.app-box{background:rgba(0,0,0,0.04);border-radius:10px;padding:10px;border:1px solid rgba(0,0,0,0.06);backdrop-filter:blur(10)}.app-title{font-weight:700;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.app-value{font-size:.9rem;color:rgba(0,0,0,0.85);white-space:pre-wrap;line-height:1.4;margin-top:6px; word-wrap:break-word;overflow-wrap:break-word; word-break:break-all;}.close{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.92);font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,0.18);font-size:1.2rem}.close:hover{transform:scale(1.06)}.game-modes-container{margin-top:8px;display:flex;flex-direction:column;gap:8px;}.game-mode-box{background:rgba(0,0,0,0.03);border-radius:8px;padding:8px;border-left:3px solid rgba(0,0,0,0.1);}.game-mode-title{font-weight:600;font-size:0.9rem;margin-bottom:4px;}.game-mode-detail{font-size:0.8rem;color:rgba(0,0,0,0.7);display:flex;justify-content:space-between;}.game-mode-detail span:first-child{font-weight:500;}</style></head>
+<body>
+  <div id="loader">Loading…</div>
+  <div class="bb"></div>
+  <div class="container">
+    <h1>TWEAK — R.C.P.I</h1>
+    <div class="image"><img src="image.webp" alt="banner"></div>
+    <p class="desc">A WEBUI to check game overlay configurations, cutout settings, ANGLE driver usage, and detailed system information.</p>
+    <div class="actions">
+      <button class="action" data-mode="list">🎮 Game List 🎮</button>
+      <button class="action" data-mode="cutout">📱 Cutout Apps 📱</button>
+      <button class="action" data-mode="angle">🧩 ANGLE Apps 🧩</button>
+      <button class="action" data-mode="info">⚙️ System Info ⚙️</button>
+    </div>
+  </div>
+  <div id="popupBg" class="popup-bg" aria-hidden="true">
+    <div class="popup" role="dialog" aria-modal="true">
+      <button class="close" id="closeBtn">×</button>
+      <h2 id="popupTitle">Loading…</h2>
+      <div id="results" class="results">
+        <div class="app-box"><div class="app-title">Waiting</div><div class="app-value">Please wait…</div></div>
+      </div>
+      <div id="errorMessage" class="error-message" style="display:none;"></div>
+    </div>
+  </div>
+<script type="module">
+  let exec, fullScreen;
+  try {
+    const kernelSuModule = await import("https://cdn.jsdelivr.net/npm/kernelsu@1.0.6/+esm");
+    exec = kernelSuModule.exec;
+    fullScreen = kernelSuModule.fullScreen;
+  } catch (e) {
+    try {
+      const axeronModule = await import('axeron:shell');
+      exec = axeronModule.exec;
+      fullScreen = axeronModule.fullScreen || (() => {});
+    } catch (e2) {
+      console.error('Failed to import any shell module:', e, e2);
+      exec = async () => ({ stdout: '', stderr: 'Shell module not available.' });
+      fullScreen = () => {};
+    }
+  }
+  fullScreen(true);
+  const popupBg = document.getElementById('popupBg');
+  const popupTitle = document.getElementById('popupTitle');
+  const results = document.getElementById('results');
+  const closeBtn = document.getElementById('closeBtn');
+  const errorMessage = document.getElementById('errorMessage');
+  setTimeout(() => document.getElementById('loader').style.display = 'none', 1500);
+  async function runCmd(cmd) {
+    try {
+      const res = await exec(cmd);
+      const out = (res.stdout || '').trim();
+      const err = (res.stderr || '').trim();
+      return out || err || '';
+    } catch (e) {
+      return `EXEC ERROR: ${e.message || e}`;
+    }
+  }
+  function escapeHtml(s) {
+    if (!s) return '';
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function clearResults(msg = 'Please wait…') {
+    results.innerHTML = `<div class="app-box"><div class="app-title">Waiting</div><div class="app-value">${escapeHtml(msg)}</div></div>`;
+    errorMessage.style.display = 'none';
+  }
+  function showError(msg) {
+    errorMessage.textContent = msg;
+    errorMessage.style.display = 'block';
+  }
+  function renderGameConfigs(configs) {
+    results.innerHTML = '';
+    if (configs.length === 0) {
+      results.innerHTML = `<div class="app-box"><div class="app-title">No Games Found</div><div class="app-value">No games from the embedded preflist were found.</div></div>`;
+      return;
+    }
+    configs.forEach(item => {
+      const node = document.createElement('div');
+      node.className = 'app-box';
+      
+      let configHtml = `<div class="app-title">${escapeHtml(item.app)}</div>`;
+      const config = item.config;
+      const modesMatch = config.match(/Modes:\s*\{(.+?)\}/);
+      if (modesMatch) {
+        const modesString = modesMatch[1];
+        const individualModes = modesString.split(/,\s*(?=\d+=)/);
+
+        let modesContainerHtml = '<div class="game-modes-container">';
+        individualModes.forEach(modeStr => {
+          const parts = modeStr.match(/(\d+)=(\[(.+?)\])/);
+          if (parts) {
+            const modeId = parts[1];
+            const settingsStr = parts[3];
+            const settings = settingsStr.split(',');
+
+            let modeDetailsHtml = '';
+            settings.forEach(setting => {
+              const [key, value] = setting.split(':');
+              if (key && value) {
+                modeDetailsHtml += `<div class="game-mode-detail"><span>${escapeHtml(key.trim())}:</span><span>${escapeHtml(value.trim())}</span></div>`;
+              }
+            });
+            
+            const modeTitle = modeId === '2' ? 'Performance Mode' : modeId === '3' ? 'Balanced Mode' : `Mode ${modeId}`;
+            modesContainerHtml += `
+              <div class="game-mode-box">
+                <div class="game-mode-title">${modeTitle}</div>
+                ${modeDetailsHtml}
+              </div>
+            `;
+          }
+        });
+        modesContainerHtml += '</div>';
+        configHtml += modesContainerHtml;
+
+      } else {
+        configHtml += `<div class="app-value"><pre style="white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(config)}</pre></div>`;
+      }
+      
+      node.innerHTML = configHtml;
+      results.appendChild(node);
+    });
+  }
+
+  function renderBoxes(lines) {
+    results.innerHTML = '';
+    lines.forEach(line => {
+      const t = line.trim();
+      if (!t) return;
+      const kv = t.match(/^(.+?)\s*=\s*(.*)$/);
+      const node = document.createElement('div');
+      node.className = 'app-box';
+      if (kv) {
+        node.innerHTML = `<div class="app-title">${escapeHtml(kv[1])}</div><div class="app-value">${escapeHtml(kv[2])}</div>`;
+      } else {
+        node.innerHTML = `<div class="app-title">${escapeHtml(t)}</div>`;
+      }
+      results.appendChild(node);
+    });
+    if (!results.children.length) {
+      results.innerHTML = `<div class="app-box"><div class="app-title">No entries</div><div class="app-value">No data or permission denied.</div></div>`;
+    }
+  }
+
+  function renderAngle(raw) {
+    results.innerHTML = '';
+    const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length < 1) {
+      results.innerHTML = `<div class="app-box"><div class="app-title">No ANGLE configuration found</div></div>`;
+      return;
+    }
+    const pArr = lines[0].split(/,|\s/).map(s => s.trim()).filter(Boolean);
+    const vArr = lines[1] ? lines[1].split(/,|\s/).map(s => s.trim()).filter(Boolean) : [];
+    if (pArr.length === 0) {
+      results.innerHTML = `<div class="app-box"><div class="app-title">No ANGLE packages found</div></div>`;
+      return;
+    }
+    pArr.forEach((pkg, i) => {
+      const val = vArr[i] !== undefined ? vArr[i] : '1';
+      const node = document.createElement('div');
+      node.className = 'app-box';
+      node.innerHTML = `<div class="app-title">${escapeHtml(pkg)}</div><div class="app-value">${escapeHtml(val)}</div>`;
+      results.appendChild(node);
+    });
+  }
+
+  async function show(mode) {
+    popupBg.classList.add('active');
+    popupTitle.textContent = `Running ${mode}…`;
+    clearResults('Executing command, please wait…');
+
+    try {
+      switch (mode) {
+        case 'list':
+          popupTitle.textContent = 'Game Config Scanner';
+          clearResults('Matching with embedded preflist...');
+          
+          const userAppsRaw = await runCmd('pm list packages -3');
+          const userApps = userAppsRaw.split(/\r?\n/).map(line => line.replace(/^package:/, '').trim()).filter(Boolean);
+          
+          const preflistData = `
+Nekootan.kfkj
+adventure.rpg.anime.game.vng.ys6
+age.of.civilizations2.jakowski.lukasz
+air.com.ubisoft.brawl.halla.platform.fighting.action.pvp
+brownmonster.app.game.rushrally3
+com.AlfaBravo.Combat
+com.CarXTech.highWay
+com.CarXTech.street
+com.ChillyRoom.DungeonShooter
+com.EndlessClouds.Treeverse
+com.EtherGaming.PocketRogues
+com.Flanne.MinutesTillDawn.roguelike.shooting.gp
+com.FosFenes.Sonolus
+com.GameCoaster.ProtectDungeon
+com.HoYoverse.Nap
+com.HoYoverse.hkrpgoversea
+com.LanPiaoPiao.PlantsVsZombiesRH
+com.MOBGames.PoppyMobileChap1
+com.OxGames.Pluvia
+com.PigeonGames.Phigros
+com.PigeonGames.Rizline
+com.ProjectMoon.LimbusCompany
+com.Psyonix.RL2D
+com.RickyG.DONTFORGET
+com.RoamingStar.BlueArchive
+com.ShinyShoe.MonsterTrain.mtap
+com.Shooter.ModernWarfront
+com.Shooter.ModernWarship
+com.Shooter.ModernWarships
+com.Sunborn.SnqxExilium
+com.Sunborn.SnqxExilium.Glo
+com.TeamCherry.HollowKnight
+com.TechTreeGames.TheTower
+com.Vince.AlamobileFormula
+com.WandaSoftware.TruckersofEurope3
+com.Wispwood.ArrowQuest
+com.YoStarEN.Arknights
+com.YoStarEN.HBR
+com.YoStarEN.MahjongSoul
+com.YoStarEN.StellaSora
+com.YoStarJP.MajSoul
+com.YoStar.AetherGazer
+com.YostarJP.BlueArchive
+com.YoStarJP.Arknights
+com.ZeroCastleGameStudioINTL.StrikeBusterPrototype
+com.ZeroCastleGameStudio.StrikeBusterPrototype
+com.actgames.bbee
+com.activision.callofduty.shooter
+com.activision.callofduty.warzone
+com.albiononline
+com.aligames.kuang.kybc
+com.aligames.kuang.kybc.huawei
+com.alightcreative.motion
+com.android.test.uibench
+com.andromeda.androbench2
+com.and.games505.Terraria
+com.archosaur.sea.dr.gp
+com.asobimo.toramonline
+com.autumn.skullgirls
+com.axlebolt.standoff2
+com.bairimeng.dmmdzz
+com.bandainamcoent.opbrww
+com.bandainamcoent.sao
+com.bandainamcoent.shinycolorsprism
+com.bandainamcoent.tensuramrkww
+com.bandainamcoent.ultimateninjastorm
+com.bandainamcogames.dbzdokkanww
+com.bf.sgs.hdexp.bd
+com.bhvr.deadbydaylight
+com.bilibiligame.heglgp
+com.bilibili.azurlane
+com.bilibili.deadcells.mobile
+com.bilibili.fatego
+com.bilibili.heaven
+com.bilibili.priconne
+com.bilibili.star.bili
+com.bilibili.warmsnow
+com.biligamekr.aggp
+com.bingkolo.kleins.cn
+com.blizzard.diablo.immortal
+com.blizzard.wtcg.hearthstone
+com.bluepoch.m.en.reverse1999
+com.bscotch.crashlands2
+com.bushiroad.d4dj
+com.bushiroad.en.bangdreamgbp
+com.bushiroad.lovelive.schoolidolfestival2
+com.carxtech.sr
+com.chillyroom.soulknightprequel
+com.chucklefish.stardewvalley
+com.citra.emu
+com.cnvcs.xiangqi
+com.com2us.starseedgl.android.google.global.normal
+com.companyname.AM2RWrapper
+com.criticalforceentertainment.criticalops
+com.crunchyroll.princessconnectredive
+com.denachina.g13002010
+com.dena.a12026801
+com.denchi.vtubestudio
+com.devsisters.ck
+com.dfjz.moba
+com.dgames.g15002002
+com.dishii.mm
+com.dishii.soh
+com.dois.greedgame
+com.dolphinemu.dolphinemu
+com.dragonli.projectsnow.lhm
+com.drivezone.car.race.game
+com.dts.freefireadv
+com.dts.freefiremax
+com.dts.freefireth
+com.dts.freefireth.huawei
+com.dxx.firenow
+com.ea.gp.apexlegendsmobilefps
+com.ea.gp.fifamobile
+com.ea.gp.nfsm
+com.emulator.fpse64
+com.epicgames.fortnite
+com.epicgames.portal
+com.epsxe.ePSXe
+com.eyougame.msen
+com.fantablade.icey
+com.farlightgames.igame.gp
+com.feralinteractive.gridas
+com.firewick.p42.bilibili
+com.firsttouchgames.dls7
+com.fizzd.connectedworlds
+com.futuremark.dmandroid.application
+com.gabama.monopostolite
+com.gaijingames.wtm
+com.gakpopuler.gamekecil
+com.gameark.ggplay.lonsea
+com.gamedevltd.wwh
+com.gameloft.android.ANMP.GloftA9HM
+com.gameloft.android.ANMP.GloftMVHM
+com.gameloft.android.SAMS.GloftA9SS
+com.garena.game.codm
+com.garena.game.df
+com.garena.game.kgid
+com.garena.game.kgtw
+com.garena.game.kgvn
+com.garena.game.lmjx
+com.garena.game.nfsm
+com.gbits.funnyfighter.android.overseas
+com.gravity.romg
+com.gravity.roo.sea
+com.gryphline.exastris.gp
+com.guigugame.guigubahuang
+com.guyou.deadstrike
+com.h73.jhqyna
+com.halo.windf.hero
+com.heavenburnsred
+com.hermes.j1game
+com.hermes.mk
+com.herogame.gplay.magicminecraft.mmorpg
+com.hg.cosmicshake
+com.hg.lbw
+com.hottapkgs.hotta
+com.humo.yqqsqz.yw
+com.hypergryph.arknights
+com.hypergryph.exastris
+com.idreamsky.klbqm
+com.idreamsky.strinova
+com.igg.android.doomsdaylastsurvivors
+com.ignm.raspberrymash.jp
+com.ilongyuan.implosion
+com.infoldgames.infinitynikkien
+com.jacksparrow.jpmajiang
+com.japan.datealive.gp
+com.je.supersus
+com.jumpw.mobile300
+com.kakaogames.eversoul
+com.kakaogames.gdts
+com.kakaogames.wdfp
+com.kiloo.subwaysurf
+com.kog.grandchaseglobal
+com.komoe.kmumamusumegp
+com.kurogame.aki
+com.kurogame.gplay.punishing.grayraven.en
+com.kurogame.haru
+com.kurogame.haru.bilibili
+com.kurogame.haru.hero
+com.kurogame.mingchao
+com.kurogame.wutheringwaves.global
+com.leiting.wf
+com.lemcnsun.soultide.android
+com.levelinfinite.hotta.gp
+com.levelinfinite.sgameGlobal
+com.levelinfinite.sgameGlobal.midaspay
+com.lilithgames.hgame.cn
+com.lilithgame.hgame.gp
+com.lilithgame.roc.gp
+com.linecorp.LGGRTHN
+com.linegames.sl
+com.longe.allstarhmt
+com.lrgame.dldl.sea
+com.madfingergames.legends
+com.maleo.bussimulatorid
+com.miHoYo.GI.samsung
+com.miHoYo.GenshinImpact
+com.miHoYo.HSoDv2JPOriginalEx
+com.miHoYo.Nap
+com.miHoYo.Yuanshen
+com.miHoYo.bh3
+com.miHoYo.bh3global
+com.miHoYo.bh3oversea
+com.miHoYo.bh3rdJP
+com.miHoYo.bh3.bilibili
+com.miHoYo.bh3.mi
+com.miHoYo.bh3.uc
+com.miHoYo.enterprise.NGHSoD
+com.miHoYo.hkrpg
+com.miHoYo.ys
+com.miHoYo.zenless
+com.minidragon.idlefantasy
+com.miniworldgame.creata.vn
+com.miraclegames.farlight84
+com.mobiin.gp
+com.mobilechess.gp
+com.mobilelegends.hwag
+com.mobilelegends.mi
+com.mobilelegends.taptest
+com.mobile.legends
+com.modx.daluandou
+com.mojang.hostilegg
+com.mojang.minecraftpe
+com.mojang.minecraftpe.patch
+com.morizero.milthm
+com.nanostudios.games.twenty.minutes
+com.ncsoft.lineagen
+com.nebulajoy.act.dmcpoc.asia
+com.nekki.shadowfight
+com.nekki.shadowfight3
+com.neowizgames.game.browndust2
+com.neowiz.game.idolypride.en
+com.netease.AVALON
+com.netease.EVE
+com.netease.aceracer
+com.netease.allstar
+com.netease.dfjs
+com.netease.dunkcd
+com.netease.dwrg
+com.netease.eve.en
+com.netease.frxyna
+com.netease.g78na.gb
+com.netease.g93na
+com.netease.h73hmt
+com.netease.h75na
+com.netease.hyxd
+com.netease.idv
+com.netease.jddsaef
+com.netease.ko
+com.netease.l22
+com.netease.lagrange
+com.netease.lglr
+com.netease.lztgglobal
+com.netease.ma84
+com.netease.ma100asia
+com.netease.moba
+com.netease.mrzh
+com.netease.newspike
+com.netease.nshm
+com.netease.nshmhmt
+com.netease.onmyoji
+com.netease.party
+com.netease.partyglobal
+com.netease.pes
+com.netease.qrsj
+com.netease.race
+com.netease.racerna
+com.netease.sky
+com.netease.soulofhunter
+com.netease.tj
+com.netease.tom
+com.netease.wotb
+com.netease.wyclx
+com.netease.x19
+com.netease.yhtj
+com.netease.yyslscn
+com.netflix.NGP.GTAIIIDefinitiveEdition
+com.netflix.NGP.GTASanAndreasDefinitiveEdition
+com.netflix.NGP.GTAViceCityDefinitiveEdition
+com.netmarble.skiagb
+com.netmarble.sololv
+com.netmarble.tog
+com.nexon.bluearchive
+com.nexon.kartdrift
+com.nexon.konosuba
+com.nexon.mdnf
+com.nexon.mod
+com.ngame.allstar.eu
+com.nianticlabs.monsterhunter
+com.nianticproject.ingress
+com.noctuagames.android.ashechoes
+com.noctua.android.crazyones
+com.npixel.GranSagaGB
+com.olzhass.carparking.multyplayer
+com.oninou.FAPI
+com.papegames.infinitynikki
+com.papegames.nn4.en
+com.pearlabyss.blackdesertm
+com.pearlabyss.blackdesertm.gl
+com.pinkcore.tkfm
+com.plarium.raidlegends
+com.playdigious.deadcells.mobile
+com.playmini.miniworld
+com.play.rosea
+com.popcap.pvz
+com.primatelabs.geekbench6
+com.proximabeta.dn2.global
+com.proximabeta.mf.aceforce2
+com.proximabeta.mf.liteuamo
+com.proximabeta.mf.uamo
+com.proximabeta.nikke
+com.proxima.dfm
+com.prpr.musedash
+com.pubg
+com.pubg.imobile
+com.pubg.krmobile
+com.pubg.newstate
+com.pwrd.hotta.laohu
+com.pwrd.huanta
+com.pwrd.opmwsea
+com.pwrd.p5x
+com.pwrd.persona5x.laohu
+com.r2games.myhero.bilibili
+com.rayark.cytus2
+com.rayark.deemo2
+com.rayark.deemoreborn
+com.rayark.implosion
+com.rayark.sdorica
+com.rekoo.pubgm
+com.retroarch
+com.rinzz.projectmuse
+com.riotgames.league.teamfighttactics
+com.riotgames.league.teamfighttacticstw
+com.riotgames.league.teamfighttacticsvn
+com.riotgames.league.wildrift
+com.roblox.client
+com.roblox.client.vnggames
+com.robtopx.geometryjump
+com.rockstargames.gta3
+com.rockstargames.gta3.de
+com.rockstargames.gtasa
+com.rockstargames.gtasa.de
+com.rockstargames.gtavc
+com.rockstargames.gtavc.de
+com.rsg.myheroesen
+com.sandboxinteractive.albiononline
+com.sandboxol.blockymods
+com.seasun.jx3
+com.seasun.snowbreak.google
+com.sega.ColorfulStage.en
+com.sega.pjsekai
+com.sega.soniccd.classic
+com.sgra.dragon
+com.shangyoo.neon
+com.shatteredpixel.shatteredpixeldungeon
+com.shenlan.m.reverse1999
+com.silverstarstudio.angellegion
+com.smokoko.race
+com.sofunny.Sausage
+com.soulgamechst.majsoul
+com.spaceapegames.beatstar
+com.sprduck.garena.vn
+com.squareenix.lis
+com.starform.metalstorm
+com.stove.epic7.google
+com.studiobside.CounterSide
+com.studiowildcard.wardrumstudios.ark
+com.studiowildcard.wardrumstudios.ark.ncr
+com.sugarfun.gp.sea.lzgwy
+com.sunborn.girlsfrontline.en
+com.sunborn.neuralcloud
+com.sunborn.neuralcloud.en
+com.superb.rhv
+com.supercell.boombeach
+com.supercell.brawlstars
+com.supercell.clashofclans
+com.supercell.clashroyale
+com.supercell.hayday
+com.supercell.squad
+com.sybogames.subway.surfers.game
+com.sy.dldlhsdj
+com.t2ksports.nba2k20and
+com.tencent.KiHan
+com.tencent.af
+com.tencent.baiyeint
+com.tencent.hhw
+com.tencent.ig
+com.tencent.iglite
+com.tencent.jkchess
+com.tencent.letsgo
+com.tencent.lolm
+com.tencent.mf.uam
+com.tencent.msgame
+com.tencent.nba2kx
+com.tencent.nfsonline
+com.tencent.tmgp.WePop
+com.tencent.tmgp.bh3
+com.tencent.tmgp.cf
+com.tencent.tmgp.cod
+com.tencent.tmgp.dfjs
+com.tencent.tmgp.dfm
+com.tencent.tmgp.dnf
+com.tencent.tmgp.dwrg
+com.tencent.tmgp.ffom
+com.tencent.tmgp.gnyx
+com.tencent.tmgp.kr.codm
+com.tencent.tmgp.pubgmhd
+com.tencent.tmgp.sgame
+com.tencent.tmgp.sgamece
+com.tencent.tmgp.speedmobile
+com.tencent.tmgp.sskeus
+com.tencent.tmgp.supercell.boombeach
+com.tencent.tmgp.wuxia
+com.tencent.tmgp.yys.zqb
+com.tencent.toaa
+com.tgc.sky.android
+com.the10tons.dysmantle
+com.tinybuildgames.helloneighbor
+com.tipsworks.android.pascalswager
+com.tipsworks.pascalswager
+com.trampolinetales.lbal
+com.tumuyan.ncnn.realsr
+com.tungsten.fcl
+com.cygames.umamusume
+com.ubisoft.rainbowsixmobile.r6.fps.pvp.shooter
+com.unity.mmd
+com.valvesoftware.cswgsm
+com.valvesoftware.source
+com.vng.mlbbvn
+com.vng.pubgmobile
+com.vng.speedvn
+com.wb.goog.scribblenauts3
+com.winlator
+com.winlator.cmod
+com.ludashi.benchmark
+com.wondergames.warpath.gp
+com.xd.TLglobal
+com.xd.dxlzz.taptap
+com.xd.muffin.gp.global
+com.xd.rotaeno.googleplay
+com.xd.rotaeno.tapcn
+com.xd.ssrpgen
+com.xd.terraria
+com.xd.xdt
+com.xindong.torchlight
+com.yinhan.hunter
+com.yongshi.tenojo
+com.yoozoo.jgame.global
+com.yoozoo.jgame.us
+com.zlongame.mhmnz
+com.ztgame.bob
+com.ztgame.yyzy
+com.zy.wqmt.cn
+com.bandainamcoent.dblegends_ww
+com.bandainamcoent.idolmaster_gakuen
+com.bandainamcoent.imas_millionlive_theaterdays
+com.ea.games.r3_row
+com.ea.game.pvz2_rfl
+com.ea.game.pvz2_row
+com.ea.game.pvzfree_row
+com.feralinteractive.gridautosport_edition_android
+com.miHoYo.bh3oversea_vn
+cyou.joiplay.joiplay
+hg.toriteling.neetchan
+game.qualiarts.idolypride
+gplay.punishing.grayraven
+id.rj01117883.liomeko
+jp.co.bandainamcoent.BNEI0242
+jp.co.craftegg.band
+jp.co.cygames.princessconnectredive
+jp.co.cygames.umamusume
+jp.co.koeitecmo.ReslerianaGL
+jp.garud.ssimulator
+jp.konami.duellinks
+jp.konami.masterduel
+jp.konami.pesam
+jp.pokemon.pokemonunite
+jp.goodsmile.touhoulostwordglobal_android
+lega.feisl.hhera
+me.magnum.melonds.nightly
+me.mugzone.emiria
+me.pou.app
+me.tigerhix.cytoid
+minitech.miniworld
+moe.low.arc
+net.kdt.pojavlaunch
+net.kdt.pojavlaunch.debug
+net.kdt.pojavlaunch.firefly
+net.wargaming.wot.blitz
+nlch.game.Imouto
+org.citra.emu
+org.dolphinemu.dolphinemu
+org.flos.phira
+org.godotengine.godot4
+org.maxbytes.lfs
+org.mm.jr
+org.mupen64plusae.v3.alpha
+org.mupen64plusae.v3.fzurita.pro
+org.openttd.sdl
+org.ppsspp.ppsspp
+org.ppsspp.ppssppgold
+org.vita3k.emulator
+org.citron.citron_emu
+org.sudachi.sudachi_emu.ea
+org.uzuy.uzuy_emu.ea
+org.yuzu.yuzu_emu
+pro.archiemeng.waifu2x
+ro.alyn_sampmobile.game
+ru.nsu.ccfit.zuev.osuplus
+ru.unisamp_mobile.game
+sh.ppy.osulazer
+skyline.emu
+skyline.purple
+skynet.cputhrottlingtest
+tw.sonet.allbw
+tw.sonet.princessconnect
+tw.txwy.and.arknights
+uk.co.powdertoy.tpt
+vng.games.revelation.mobile
+www.townofmagic.com
+xd.sce.promotion
+xyz.aethersx2.android
+`;
+          const preflist = preflistData.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+          
+          const foundApps = preflist.filter(pkg => userApps.includes(pkg));
+          if (foundApps.length === 0) {
+            renderGameConfigs([]);
+            return;
+          }
+          clearResults(`Found ${foundApps.length} games. Getting configurations...`);
+
+          const gameConfigs = [];
+          for (const app of foundApps) {
+            const config = await runCmd(`cmd game list-configs ${app}`);
+            gameConfigs.push({ app, config });
+          }
+          
+          popupTitle.textContent = 'Game Configs Found';
+          renderGameConfigs(gameConfigs);
+          break;
+
+        case 'cutout':
+          popupTitle.textContent = 'Cutout Apps';
+          const rawCutout = await runCmd(`settings get system os_displaycutoutmode_settings`);
+          if (!rawCutout) rawCutout = await runCmd(`cmd settings get system os_displaycutoutmode_settings`);
+          const outCutout = rawCutout.replace(/,/g, '\n').replace(/=1/g,' = Enabled').replace(/=0/g,' = Disabled');
+          const linesCutout = outCutout.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+          renderBoxes(linesCutout);
+          break;
+
+        case 'angle':
+          popupTitle.textContent = 'ANGLE Apps';
+          const pkgs = await runCmd(`settings get global angle_gl_driver_selection_pkgs`);
+          const vals = await runCmd(`settings get global angle_gl_driver_selection_values`);
+          renderAngle(`${pkgs}\n${vals}`);
+          break;
+
+        case 'info':
+          popupTitle.textContent = 'System Info';
+          const info_cmds = [
+            'getprop ro.product.product.tran.device.name.default',
+            'getprop ro.product.device',
+            'getprop ro.product.model',
+            'getprop ro.build.display.id',
+            'getprop ro.build.version.release',
+            'getprop ro.build.version.sdk',
+            'uname -r',
+            'getprop ro.soc.model',
+            'grep -c ^processor /proc/cpuinfo',
+            'dumpsys SurfaceFlinger | grep -i gles | grep "GLES:"',
+            'dumpsys SurfaceFlinger | grep -iE "skia|angle|gl|vk" | head -n 1',
+            'getprop ro.hardware.vulkan',
+            'getprop ro.vulkan.version',
+            'getprop debug.hwui.opengl_driver',
+            'settings get global angle_gl_driver_selection_pkgs',
+            'free -h | grep Mem',
+            'df -h /data | tail -1',
+            'getprop ro.product.cpu.abilist',
+            'getprop ro.product.cpu.abi',
+            'getprop ro.zygote',
+            'ls /system/bin/toybox',
+            'which su',
+            'getenforce'
+          ];
+          const info_results = await Promise.all(info_cmds.map(c => runCmd(c)));
+
+          const socModel = info_results[7];
+          const socMap = { 'mt6785': 'Helio G80', 'mt6789': 'Helio G90T', 'mt6885': 'Helio G85', 'mt6833': 'Dimensity 810', 'mt6877': 'Dimensity 920', 'mt6833gp': 'Dimensity 6080', 'com.nama.apl': 'Snapdragon 750G', 'com.nama.apl': 'Snapdragon 778G', 'com.nama.apl': 'Snapdragon 855', 'com.nama.apl': 'Snapdragon 865' };
+          const socName = socMap[socModel.toLowerCase()] || socModel || 'N/A';
+          
+          let cpuCluster = 'None';
+          let cpuClockspeed = 'N/A';
+          const policyListRaw = await runCmd('ls /sys/devices/system/cpu/cpufreq | grep policy');
+          if (policyListRaw) {
+              const policies = policyListRaw.trim().split(/\s+/);
+              if (policies.length > 1) {
+                  const freqPromises = policies.map(p => runCmd(`cat /sys/devices/system/cpu/cpufreq/${p}/cpuinfo_max_freq`));
+                  const freqs = await Promise.all(freqPromises);
+                  const policyFreqs = policies.map((policy, index) => ({
+                      policy: policy, freq: parseInt(freqs[index]) || 0
+                  }));
+                  policyFreqs.sort((a, b) => b.freq - a.freq);
+                  const bigPolicy = policyFreqs[0];
+                  const littlePolicies = policyFreqs.slice(1);
+
+                  const bigCpusRaw = await runCmd(`cat /sys/devices/system/cpu/cpufreq/${bigPolicy.policy}/affected_cpus`);
+                  const bigCoreCount = bigCpusRaw.trim().split(/\s+/).filter(n => n).length;
+
+                  let totalLittleCoreCount = 0;
+                  if (littlePolicies.length > 0) {
+                      const littleCpuPromises = littlePolicies.map(p => runCmd(`cat /sys/devices/system/cpu/cpufreq/${p.policy}/affected_cpus`));
+                      const littleCpusList = await Promise.all(littleCpuPromises);
+                      totalLittleCoreCount = littleCpusList.reduce((sum, cpusRaw) => {
+                          return sum + cpusRaw.trim().split(/\s+/).filter(n => n).length;
+                      }, 0);
+                  }
+                  cpuCluster = `big: ${bigCoreCount}, little: ${totalLittleCoreCount}`;
+
+                  const bigClockKhz = bigPolicy.freq;
+                  const littleClockKhz = littlePolicies.length > 0 ? littlePolicies[0].freq : 0;
+                  cpuClockspeed = `big: ${(bigClockKhz / 1000).toFixed(0)} MHz, little: ${(littleClockKhz / 1000).toFixed(0)} MHz`;
+              }
+          }
+
+          let gpuName = 'N/A', gpuVersion = 'N/A', openGLVersion = 'N/A';
+          const glesLine = info_results[9];
+          if (glesLine) {
+              const glesMatch = glesLine.match(/GLES:\s*(.*?),\s*(.*?),\s*(OpenGL ES\s*[\d.]+)\s*(v.*)/);
+              if (glesMatch) {
+                  const vendor = glesMatch[1].trim();
+                  const model = glesMatch[2].trim();
+                  gpuName = `${vendor} - ${model}`;
+                  openGLVersion = glesMatch[3].trim();
+                  gpuVersion = glesMatch[4].trim();
+              } else {
+                  const parts = glesLine.split(',').map(p => p.trim());
+                  if (parts.length >= 2) {
+                      gpuName = parts[1];
+                  }
+                  if (parts.length >= 3) {
+                      const glMatch = parts[2].match(/(OpenGL ES\s*[\d.]+)/);
+                      if (glMatch) openGLVersion = glMatch[1];
+                      const driverMatch = parts[2].match(/(v[\d.rp-]+)/);
+                      if (driverMatch) gpuVersion = driverMatch[1];
+                  }
+              }
+          }
+
+          let renderProfile = 'N/A';
+          const renderLine = info_results[10];
+          if (renderLine.toLowerCase().includes('skia')) renderProfile = 'Skia';
+          else if (renderLine.toLowerCase().includes('angle')) renderProfile = 'Angle';
+          else if (renderLine.toLowerCase().includes('vk')) renderProfile = 'SkiaVK';
+          else if (renderLine.toLowerCase().includes('gl')) renderProfile = 'SkiaGL';
+          else renderProfile = 'Unknown';
+
+          let vulkanVersion = 'None';
+          const vulkanHw = info_results[11];
+          if (vulkanHw) {
+              const vulkanVerProp = info_results[12];
+              const hwuiDriver = info_results[13];
+              const verHex = parseInt(vulkanVerProp, 16);
+              if (!isNaN(verHex) && verHex > 0) {
+                 const major = (verHex >> 22) & 0x3FF;
+                 const minor = (verHex >> 12) & 0x3FF;
+                 vulkanVersion = `${major}.${minor}`;
+              } else if (hwuiDriver && hwuiDriver.toLowerCase().includes('vulkan')) {
+                 vulkanVersion = '1.2';
+              } else {
+                 vulkanVersion = '1.1';
+              }
+          }
+
+          const ramParts = info_results[15].split(/\s+/);
+          const ram = ramParts.length > 1 ? ramParts[1] : 'N/A';
+
+          const romParts = info_results[16].split(/\s+/);
+          let rom = 'N/A';
+          if (romParts.length > 1) {
+            let romSizeStr = romParts[1];
+            let romSizeGB = parseFloat(romSizeStr);
+            if (romSizeStr.endsWith('T')) { romSizeGB *= 1024; }
+            if (!isNaN(romSizeGB)) {
+              const closestPowerOf2 = Math.pow(2, Math.round(Math.log2(romSizeGB)));
+              rom = `${closestPowerOf2.toFixed(0)}GB`;
+            }
+          }
+          
+          const gameDriverActive = info_results[14].trim() ? 'Yes' : 'No';
+          const angleActive = info_results[14].trim() ? 'Yes' : 'No';
+
+          const info_data = [
+            { label: 'Device Name', value: info_results[0] || info_results[1] },
+            { label: 'Device Model', value: info_results[2] }, 
+            { label: 'Basename', value: info_results[3] },
+            { label: 'Android OS', value: info_results[4] },
+            { label: 'API Level', value: info_results[5] },
+            { label: 'Kernel Version', value: info_results[6] },
+            { label: 'SoC Name', value: socName },
+            { label: 'SoC Model', value: socModel },
+            { label: 'CPU Cores', value: info_results[8] },
+            { label: 'CPU Cluster', value: cpuCluster },
+            { label: 'CPU Clockspeed', value: cpuClockspeed },
+            { label: 'GPU Name', value: gpuName },
+            { label: 'GPU Version', value: gpuVersion },
+            { label: 'OpenGL Version', value: openGLVersion },
+            { label: 'Vulkan Version', value: vulkanVersion },
+            { label: 'Profil Render', value: renderProfile },
+            { label: 'Game Driver Active', value: gameDriverActive },
+            { label: 'Angle Active', value: angleActive },
+            { label: 'RAM', value: ram },
+            { label: 'ROM', value: rom },
+            { label: 'ABI Support', value: info_results[17] || info_results[18] || 'N/A' },
+            { label: 'Runtime Java', value: info_results[19].includes('64') ? 'ART 64-bit' : 'ART 32-bit' },
+            { label: 'TOYBOX', value: info_results[20] ? 'Yes' : 'No' },
+            { label: 'Root Status', value: info_results[21] ? 'Rooted' : 'Not Rooted' },
+            { label: 'Se-LINUX', value: info_results[22] },
+          ];
+
+          results.innerHTML = '';
+          info_data.forEach(item => {
+            const node = document.createElement('div');
+            node.className = 'app-box';
+            node.innerHTML = `<div class="app-title">${escapeHtml(item.label)}</div><div class="app-value">${escapeHtml(item.value)}</div>`;
+            results.appendChild(node);
+          });
+          break;
+      }
+    } catch (e) {
+      console.error('An unexpected error occurred:', e);
+      popupTitle.textContent = 'Critical Error';
+      clearResults('An unexpected error occurred.');
+      showError(`The script encountered a critical error. Details: ${e.message}`);
+    }
+  }
+
+  document.querySelectorAll('button.action').forEach(b=>{
+    b.addEventListener('click',()=>{
+      try {
+        show(b.dataset.mode);
+      } catch (e) {
+        console.error('Error in event listener:', e);
+        showError(`Error: ${e.message}`);
+      }
+    });
+  });
+  closeBtn.addEventListener('click',()=>popupBg.classList.remove('active'));
+  popupBg.addEventListener('click',e=>{ if(e.target===popupBg) popupBg.classList.remove('active'); });
+
+</script>
+</body>
+</html>
