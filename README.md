@@ -1,6 +1,6 @@
 # Tweak R.C.P.I
 
-[![License](https://img.shields.io/badge/license-BSL%201.0-blue.svg)]
+![License](https://img.shields.io/badge/license-BSL%201.0-blue.svg)]'
 
 Little tweaks and accessibility modifications for android content.
 
